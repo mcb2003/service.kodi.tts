@@ -17,9 +17,11 @@ from typing import (Callable, Dict, Final, ForwardRef, List,
                     OrderedDict as OrderedDict_type, Tuple)
 
 import xbmc
+import xbmcaddon
 import xbmcgui
 
 from common import AbortException, reraise
+from common.constants import Constants
 from common.logger import *
 from common.monitor import Monitor
 from utils import util
@@ -300,6 +302,12 @@ class WinDialogState:
         return msg
 
 
+class FocusPollingSettingsMonitor(xbmc.Monitor):
+
+    def onSettingsChanged(self) -> None:
+        WindowStateMonitor.reload_polling_interval()
+
+
 class WindowStateMonitor:
 
     _logger: BasicLogger = None
@@ -308,9 +316,12 @@ class WindowStateMonitor:
     _window_state_listeners: OrderedDict_type[str, ListenerInfo]
     _window_state_listeners = OrderedDict()
     IDLE_POLLING_INTERVAL: float = 0.6
-    POLLING_INTERVAL: Final[float] = 0.2
-    NON_FOCUSED_POLLING_INTERVAL: Final[float] = 0.4
-    current_polling_interval: float = POLLING_INTERVAL
+    POLLING_INTERVAL: Final[float] = 0.05
+    MIN_POLLING_INTERVAL: Final[float] = 0.01
+    MAX_POLLING_INTERVAL: Final[float] = 1.0
+    _override_polling_interval: bool = False
+    _configured_polling_interval: float = POLLING_INTERVAL
+    _settings_monitor: xbmc.Monitor | None = None
     INVALID_DIALOG: Final[int] = 9999
 
     WINDOW_CHANGED: Final[int] = 0x01
@@ -343,6 +354,8 @@ class WindowStateMonitor:
             cls._logger: BasicLogger = MY_LOGGER
             cls._window_state_listener_lock = threading.RLock()
             cls._window_state_lock = threading.RLock()
+            cls.reload_polling_interval()
+            cls._settings_monitor = FocusPollingSettingsMonitor()
 
             # Weird problems with recursion if we make requests to the super
             util.runInThread(cls.monitor_gui_state, args=[],
@@ -359,20 +372,43 @@ class WindowStateMonitor:
 
     @classmethod
     def monitor_gui_state(cls) -> None:
-        while not Monitor.wait_for_abort(timeout=cls.current_polling_interval):
+        while not Monitor.is_abort_requested():
+            if Monitor.wait_for_abort(timeout=cls.get_polling_interval()):
+                break
             window_state: WinDialogState
             window_state = cls.check_win_dialog_state()
-            if (KodiPlayerMonitor.player_status == KodiPlayerState.PLAYING_VIDEO
-                    and Constants.STOP_ON_PLAY):
-                cls.current_polling_interval = cls.IDLE_POLLING_INTERVAL
-            elif window_state.focus_changed:
-                cls.current_polling_interval = cls.POLLING_INTERVAL
-            else:
-                cls.current_polling_interval = cls.NON_FOCUSED_POLLING_INTERVAL
 
             # notify_listeners does additional filtering
             if not window_state.is_bad_window:
                 cls._notify_listeners(window_state)
+
+    @classmethod
+    def reload_polling_interval(cls) -> None:
+        """Load the focus polling preference through Kodi's add-on API."""
+        try:
+            addon = xbmcaddon.Addon(Constants.ADDON_ID)
+            override = addon.getSetting('override_poll_interval.tts').lower() == 'true'
+            interval_ms = int(addon.getSetting('poll_interval.tts'))
+            interval = interval_ms / 1000.0
+            interval = max(cls.MIN_POLLING_INTERVAL,
+                           min(cls.MAX_POLLING_INTERVAL, interval))
+            with cls._window_state_lock:
+                cls._override_polling_interval = override
+                cls._configured_polling_interval = interval
+        except (TypeError, ValueError):
+            cls._logger.exception('Invalid focus polling interval')
+        except Exception:
+            cls._logger.exception('Unable to read focus polling settings')
+
+    @classmethod
+    def get_polling_interval(cls) -> float:
+        with cls._window_state_lock:
+            if cls._override_polling_interval:
+                return cls._configured_polling_interval
+        if (KodiPlayerMonitor.player_status == KodiPlayerState.PLAYING_VIDEO
+                and Constants.STOP_ON_PLAY):
+            return cls.IDLE_POLLING_INTERVAL
+        return cls.POLLING_INTERVAL
 
     @classmethod
     def check_win_dialog_state(cls) -> WinDialogState:
