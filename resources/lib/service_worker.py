@@ -1046,17 +1046,18 @@ class TTSService:
         """
         #  MY_LOGGER.debug(f'In check_for_text')
         cls.checkAutoRead()  # Readers seem to flag text that they want read after the
-                             # the current reading. Perhaps more cpu is_required?
-                             # Perhaps to give user a chance to skip? Also seems
-                             # to be able to be triggered externally.
+        # the current reading. Perhaps more cpu is_required?
+        # Perhaps to give user a chance to skip? Also seems
+        # to be able to be triggered externally.
         new_notice = cls.checkNoticeQueue(window_state)  # Any incoming notifications from cmd line or addon?
-        new_window = cls.checkWindow(new_notice, window_state)   # Window changed?
-        new_control = cls.checkControl(new_window, window_state)  # Control Changed?
-        #
-        # Read Description of the control, or any other context prior to reading
-        # the actual text in any changed control.
-
-        new_description = new_control and cls.checkControlDescription(new_window, window_state) or False
+        new_window = False
+        new_control = False
+        new_description = False
+        if window_state.changed != 0 or window_state.revoice:
+            new_window = cls.checkWindow(new_notice, window_state)
+            new_control = cls.checkControl(new_window, window_state)
+            new_description = (new_control
+                               and cls.checkControlDescription(new_window, window_state))
         #  MY_LOGGER.debug(f'Calling: windowReader')
         phrases: PhraseList = PhraseList()
         success: bool = cls.windowReader.getControlText(cls.current_control_id, phrases)
@@ -1524,7 +1525,10 @@ class TTSService:
                 secondary[0].set_pre_pause(Phrase.PAUSE_LONG)
                 phrases.extend(secondary)
             if not phrases.is_empty():
-                phrases.set_interrupt(not newD)
+                phrases.set_interrupt(
+                        not newD
+                        or (window_state.control_focus_changed
+                            and not window_state.window_changed))
                 try:
                     if MY_LOGGER.isEnabledFor(DEBUG):
                         MY_LOGGER.debug(
