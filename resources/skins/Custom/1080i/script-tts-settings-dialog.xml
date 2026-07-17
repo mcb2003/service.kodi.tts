@@ -1046,6 +1046,89 @@
                         </control>
                      </control>
 
+                     <control type="group" id="1126">
+                        <topic name="focus_poll_override_group" rank="6">
+                           <outer_topic>engine_settings</outer_topic>
+                        </topic>
+                        <height>34</height>
+                        <visible>true</visible>
+                        <defaultcontrol>126</defaultcontrol>
+                        <control type="radiobutton" id="126">
+                           <description>Use custom focus polling interval</description>
+                           <topic name="focus_poll_override" rank="7">
+                              <topic_type>heading</topic_type>
+                              <heading_label>32047</heading_label>
+                              <outer_topic>focus_poll_override_group</outer_topic>
+                              <container_topic>engine_settings</container_topic>
+                              <hint_text>Enable to use the focus polling interval below</hint_text>
+                              <topic_left/>
+                              <topic_right/>
+                              <topic_up>api_key_value</topic_up>
+                              <topic_down>focus_poll_interval</topic_down>
+                           </topic>
+                           <width>850</width>
+                           <label>$LOCALIZE[32047]</label>
+                           <alignx>left</alignx>
+                           <aligny>center</aligny>
+                           <font>font12_title</font>
+                           <onleft>61</onleft>
+                           <onright>61</onright>
+                           <onup>123</onup>
+                           <ondown>128</ondown>
+                           <texturefocus border="5">button-focus2.png</texturefocus>
+                        </control>
+                     </control>
+
+                     <control type="group" id="1128">
+                        <topic name="focus_poll_interval_group" rank="6">
+                           <outer_topic>engine_settings</outer_topic>
+                        </topic>
+                        <height>34</height>
+                        <visible>true</visible>
+                        <defaultcontrol>128</defaultcontrol>
+                        <control type="label" id="127">
+                           <description>Focus polling interval label</description>
+                           <topic name="focus_poll_interval_label" rank="7">
+                              <outer_topic>focus_poll_interval_group</outer_topic>
+                           </topic>
+                           <width>850</width>
+                           <label>$LOCALIZE[32048]</label>
+                           <alignx>left</alignx>
+                           <aligny>center</aligny>
+                           <font>font12_title</font>
+                           <textcolor>white</textcolor>
+                           <shadowcolor>black</shadowcolor>
+                        </control>
+                        <control type="slider" id="128">
+                           <description>Focus polling interval</description>
+                           <topic name="focus_poll_interval" rank="7">
+                              <topic_type>heading</topic_type>
+                              <heading_labeled_by>focus_poll_interval_label</heading_labeled_by>
+                              <flows_to>127</flows_to>
+                              <value_from>internal</value_from>
+                              <units unit="ms" type="integer" decimal_digits="0"/>
+                              <outer_topic>focus_poll_interval_group</outer_topic>
+                              <container_topic>engine_settings</container_topic>
+                              <hint_text>Use cursor left or right to adjust the focus polling interval</hint_text>
+                              <topic_left/>
+                              <topic_right/>
+                              <topic_up>focus_poll_override</topic_up>
+                              <topic_down>ok_button</topic_down>
+                           </topic>
+                           <width>730</width>
+                           <right>0</right>
+                           <align>left</align>
+                           <font>font13</font>
+                           <onleft>61</onleft>
+                           <onright>61</onright>
+                           <onup>126</onup>
+                           <ondown>9001</ondown>
+                           <texturesliderbar>osd_slider_bg_2.png</texturesliderbar>
+                           <textureslidernib>osd_slider_nibNF.png</textureslidernib>
+                           <textureslidernibfocus>osd_slider_nib.png</textureslidernibfocus>
+                        </control>
+                     </control>
+
                   </control> <!-- End engine settings grouplist -->
                </control> <!-- End some useless? group -->
 

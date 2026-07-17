@@ -77,7 +77,12 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
     SELECT_API_KEY_GROUP: Final[int] = 1122
     SELECT_API_KEY_LABEL: Final[int] = 122
     SELECT_API_KEY_EDIT: Final[int] = 123
-    LAST_SELECT_ID: Final[int] = SELECT_INFLECTION_SLIDER
+    FOCUS_POLL_OVERRIDE_GROUP: Final[int] = 1126
+    FOCUS_POLL_OVERRIDE_BUTTON: Final[int] = 126
+    FOCUS_POLL_INTERVAL_GROUP: Final[int] = 1128
+    FOCUS_POLL_INTERVAL_LABEL: Final[int] = 127
+    FOCUS_POLL_INTERVAL_SLIDER: Final[int] = 128
+    LAST_SELECT_ID: Final[int] = FOCUS_POLL_INTERVAL_SLIDER
     # OPTIONS_GROUP: Final[int] = 201
     # OPTIONS_DUMMY_BUTTON: Final[int] = 202
     # KEYMAP_GROUP: Final[int] = 301
@@ -179,6 +184,13 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         self.engine_volume_group: ControlGroup | None = None
         self.engine_volume_slider: ControlSlider | None = None
         self.engine_volume_label: ControlLabel | None = None
+        self.focus_poll_override_group: ControlGroup | None = None
+        self.focus_poll_override_button: ControlRadioButton | None = None
+        self.focus_poll_interval_group: ControlGroup | None = None
+        self.focus_poll_interval_label: ControlLabel | None = None
+        self.focus_poll_interval_slider: ControlSlider | None = None
+        self._focus_polling_original: tuple[bool, int] | None = None
+        self._focus_polling_committed = False
         # self.options_dummy_button: ControlButton | None = None
         # self.keymap_dummy_button: ControlButton | None = None
         # self.advanced_dummy_button: ControlButton | None = None
@@ -374,6 +386,16 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                         clz.SELECT_VOLUME_LABEL)
                 self.engine_volume_slider = self.get_control_slider(
                         clz.SELECT_VOLUME_SLIDER)
+                self.focus_poll_override_group = self.get_control_group(
+                        clz.FOCUS_POLL_OVERRIDE_GROUP)
+                self.focus_poll_override_button = self.get_control_radio_button(
+                        clz.FOCUS_POLL_OVERRIDE_BUTTON)
+                self.focus_poll_interval_group = self.get_control_group(
+                        clz.FOCUS_POLL_INTERVAL_GROUP)
+                self.focus_poll_interval_label = self.get_control_label(
+                        clz.FOCUS_POLL_INTERVAL_LABEL)
+                self.focus_poll_interval_slider = self.get_control_slider(
+                        clz.FOCUS_POLL_INTERVAL_SLIDER)
 
                 # self.options_group = self.get_control_group(
                 #         clz.OPTIONS_GROUP)
@@ -594,6 +616,7 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
             #         clz.ADVANCED_DUMMY_BUTTON)
             # self.advanced_dummy_button.setLabel('Advanced degree')
             self.update_engine_values()
+            self.set_focus_polling_fields()
 
             self.setFocus(self.engine_engine_button)
         except Exception as e:
@@ -715,6 +738,7 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         # to the master settings, or discard all changes once this stack
         # entry is popped.
         clz = type(self)
+        self._begin_focus_polling_edit()
         self.cfg.save_settings(msg='on entry BEFORE doModal', initial_frame=True)
         # settings saved in individual methods just before changes made
         self.is_modal = True
@@ -722,6 +746,7 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         self.is_modal = False
         # Discard all uncommitted changes
         self.cfg.restore_settings(msg='doModal exit', initial_frame=True)
+        self._restore_focus_polling_settings()
         return
 
     def show(self) -> None:
@@ -741,10 +766,12 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         # to the master settings, or discard all changes once this stack
         # entry is popped.
         clz = type(self)
+        self._begin_focus_polling_edit()
         self.cfg.save_settings(msg='on entry BEFORE doModal', initial_frame=True)
         super().show()
         # Discard all uncommitted changes
         self.cfg.restore_settings(msg='show exit', initial_frame=True)
+        self._restore_focus_polling_settings()
 
     def close(self) -> None:
         """
@@ -859,12 +886,13 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                 # self.keymap_group.setVisible(False)
                 # self.advanced_group.setVisible(True)
             '''
-            if controlId in range(self.FIRST_SELECT_ID, self.LAST_SELECT_ID):
+            if controlId in range(self.FIRST_SELECT_ID, self.LAST_SELECT_ID + 1):
                 self.handle_engine_tab(controlId)
 
             elif controlId == 28:
                 # OK button
                 self.closing = True
+                self._focus_polling_committed = True
                 self.cfg.commit_settings()
                 # MY_LOGGER.info(f'ok button closing')
                 self.close()
@@ -927,11 +955,58 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                 self.select_volume()
             elif controlId == clz.SELECT_API_KEY_EDIT:
                 self.select_api_key()
+            elif controlId == clz.FOCUS_POLL_OVERRIDE_BUTTON:
+                self.select_focus_poll_override()
+            elif controlId == clz.FOCUS_POLL_INTERVAL_SLIDER:
+                self.select_focus_poll_interval()
 
             # if self.backend_changed:
             #     self.update_engine_values()
         except Exception as e:
             MY_LOGGER.exception('')
+
+    @staticmethod
+    def _get_focus_polling_settings() -> tuple[bool, int]:
+        addon = xbmcaddon.Addon(Constants.ADDON_ID)
+        override = addon.getSettingBool('override_poll_interval.tts')
+        interval = addon.getSettingInt('poll_interval.tts')
+        return override, max(10, min(1000, interval))
+
+    def _begin_focus_polling_edit(self) -> None:
+        self._focus_polling_original = self._get_focus_polling_settings()
+        self._focus_polling_committed = False
+
+    def _restore_focus_polling_settings(self) -> None:
+        if self._focus_polling_committed or self._focus_polling_original is None:
+            return
+        override, interval = self._focus_polling_original
+        addon = xbmcaddon.Addon(Constants.ADDON_ID)
+        addon.setSettingBool('override_poll_interval.tts', override)
+        addon.setSettingInt('poll_interval.tts', interval)
+
+    def set_focus_polling_fields(self) -> None:
+        override, interval = self._get_focus_polling_settings()
+        self.focus_poll_override_button.setSelected(override)
+        self.focus_poll_interval_slider.setInt(interval, 10, 10, 1000)
+        self.focus_poll_interval_slider.setEnabled(override)
+        self.focus_poll_interval_label.setLabel(
+                f'{xbmcaddon.Addon(Constants.ADDON_ID).getLocalizedString(32048)}: '
+                f'{interval} ms')
+        self.focus_poll_override_group.setVisible(True)
+        self.focus_poll_interval_group.setVisible(True)
+
+    def select_focus_poll_override(self) -> None:
+        addon = xbmcaddon.Addon(Constants.ADDON_ID)
+        override = self.focus_poll_override_button.isSelected()
+        addon.setSettingBool('override_poll_interval.tts', override)
+        self.focus_poll_interval_slider.setEnabled(override)
+
+    def select_focus_poll_interval(self) -> None:
+        interval = max(10, min(1000, self.focus_poll_interval_slider.getInt()))
+        addon = xbmcaddon.Addon(Constants.ADDON_ID)
+        addon.setSettingInt('poll_interval.tts', interval)
+        self.focus_poll_interval_label.setLabel(
+                f'{addon.getLocalizedString(32048)}: {interval} ms')
 
     def select_engine(self):
         """
