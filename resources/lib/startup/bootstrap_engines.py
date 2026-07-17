@@ -36,7 +36,7 @@ class BootstrapEngines:
         # Backends.PIPER_ID,
         # Backends.FESTIVAL_ID,
         # CepstralTTSBackend(),
-        # Backends.SPEECH_DISPATCHER_ID,
+        Backends.SPEECH_DISPATCHER_ID,
         #            VoiceOverBackend(),
         # SpeechServerBackend(),
         # ReciteTTSBackend(),
@@ -93,6 +93,16 @@ class BootstrapEngines:
             except Exception as e:
                 MY_LOGGER.exception('')
                 SettingsMap.set_available(ServiceKey.ESPEAK_KEY,
+                                          status=StatusType.BROKEN)
+        if Backends.SPEECH_DISPATCHER_ID in cls.engine_ids_by_priority:
+            try:
+                from backends.speech_dispatcher_settings import SpeechDispatcherSettings
+                SpeechDispatcherSettings.config_settings()
+            except AbortException:
+                reraise(*sys.exc_info())
+            except Exception:
+                MY_LOGGER.exception('Speech Dispatcher configuration failed')
+                SettingsMap.set_available(ServiceKey.SPEECH_DISPATCHER_KEY,
                                           status=StatusType.BROKEN)
         '''
         try:
@@ -251,6 +261,9 @@ class BootstrapEngines:
             if engine_id == Backends.ESPEAK_ID:
                 from backends.espeak import ESpeakTTSBackend
                 engine = ESpeakTTSBackend()
+            elif engine_id == Backends.SPEECH_DISPATCHER_ID:
+                from backends.speech_dispatcher import SpeechDispatcherTTSBackend
+                engine = SpeechDispatcherTTSBackend()
                 '''
             elif engine_id == Backends.FESTIVAL_ID:
                 from backends.festival import FestivalTTSBackend

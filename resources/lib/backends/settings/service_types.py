@@ -625,7 +625,8 @@ class ServiceKey:
     ESPEAK_KEY: ServiceID = ServiceID(ServiceType.ENGINE,
                                       Services.ESPEAK_ID, TTS_Type.SERVICE_ID)
     #  LOG_ONLY = Services.LOG_ONLY_ID
-    #  SPEECH_DISPATCHER = Services.SPEECH_DISPATCHER_ID
+    SPEECH_DISPATCHER_KEY: ServiceID = ServiceID(
+            ServiceType.ENGINE, Services.SPEECH_DISPATCHER_ID, TTS_Type.SERVICE_ID)
     NO_ENGINE_KEY: ServiceID = ServiceID(ServiceType.ENGINE,
                                          Services.NO_ENGINE_ID, TTS_Type.SERVICE_ID)
     POWERSHELL_KEY: ServiceID = ServiceID(ServiceType.ENGINE,

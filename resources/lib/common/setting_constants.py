@@ -56,6 +56,7 @@ class Backends(BaseSettingsConstants):
     ALL_ENGINE_IDS: List[str] = [
         #  AUTO_ID,
         ESPEAK_ID,
+        SPEECH_DISPATCHER_ID,
         # EXPERIMENTAL_ENGINE_ID,
         # FESTIVAL_ID,
         # FLITE_ID,check_availability
@@ -69,7 +70,6 @@ class Backends(BaseSettingsConstants):
         # RECITE_ID,
         # RESPONSIVE_VOICE_ID,
         # SAPI_ID,
-        # SPEECH_DISPATCHER_ID
     ]
 
     settings_map: Dict[str, Message] = {

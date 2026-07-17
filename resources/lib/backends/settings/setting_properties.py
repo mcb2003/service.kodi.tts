@@ -55,6 +55,7 @@ class SettingProp:  # (ISettings):
     # ENGINE_SPEAKS: Final[str] = 'engine_speak'  # Voicing engine also speaks
     GENDER: Final[str] = 'gender'
     GENDER_VISIBLE: Final[str] = 'gender_visible'
+    INFLECTION: Final[str] = 'inflection'
     #  GUI: Final[str] = 'gui'
     LANGUAGE: Final[str] = 'language'
     MODULE: Final[str] = 'module'
@@ -304,6 +305,7 @@ class SettingProp:  # (ISettings):
         #  DISABLE_BROKEN_SERVICES: None,
         #  EXTENDED_HELP_ON_STARTUP: None,
         GENDER: None,
+        INFLECTION: None,
         # GENDER_VISIBLE: None,
         # GUI: None,
         # HINT_TEXT_ON_STARTUP: None,
@@ -388,6 +390,7 @@ class SettingProp:  # (ISettings):
             cls.DELAY_VOICING                         : SettingType.BOOLEAN_TYPE,
             cls.DISABLE_BROKEN_SERVICES               : SettingType.BOOLEAN_TYPE,
             cls.GENDER                                : SettingType.STRING_TYPE,
+            cls.INFLECTION                            : SettingType.INTEGER_TYPE,
             cls.GENDER_VISIBLE                        : SettingType.BOOLEAN_TYPE,
             #  cls.GUI                         : SettingType.BOOLEAN_TYPE,
             cls.HELP_CONFIG_ON_STARTUP                : SettingType.BOOLEAN_TYPE,
