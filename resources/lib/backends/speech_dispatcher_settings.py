@@ -39,8 +39,10 @@ class SpeechDispatcherSettings:
         cls.check_is_supported_on_platform()
         cls.check_is_installed()
         cls.check_is_available()
+        cls.check_is_usable()
         if cls._service_status.status != Status.OK:
             raise UnusableServiceException(cls.service_key, cls._service_status, msg='')
+        cls.is_usable()
 
         BaseEngineSettings.config_settings(cls.service_key, settings=[])
         modules = SpeechDispatcherTTSBackend.list_output_modules()
@@ -130,3 +132,23 @@ class SpeechDispatcherSettings:
             MY_LOGGER.exception('Speech Dispatcher is unavailable')
         cls._service_status.status = Status.FAILED
         cls._service_status.status_summary = StatusType.BROKEN
+
+    @classmethod
+    def check_is_usable(cls) -> None:
+        """Register the direct-speech engine as selectable by Kodi TTS."""
+        if cls._service_status.progress == Progress.AVAILABLE:
+            cls._service_status.progress = Progress.USABLE
+            cls._service_status.status_summary = StatusType.OK
+            SettingsMap.define_setting(cls.service_key,
+                                       setting_type=SettingType.STRING_TYPE,
+                                       service_status=StatusType.OK,
+                                       validator=None)
+
+    @classmethod
+    def is_usable(cls) -> bool:
+        if (cls._service_status.status != Status.OK
+                or cls._service_status.progress != Progress.USABLE):
+            raise UnusableServiceException(cls.service_key,
+                                           cls._service_status,
+                                           msg='')
+        return True
