@@ -251,6 +251,60 @@
                     <control type="toggle"/>
                     <visible>true</visible>
                 </setting>
+                <!--
+                    Kodi's typed settings API only persists keys declared in
+                    this file.  Speech Dispatcher is a fixed backend, so its
+                    per-engine keys are declared here even though the custom
+                    settings dialog is responsible for presenting them.
+                -->
+                <setting help="" id="module.Speech-Dispatcher" label="32178" type="string">
+                    <level>4</level>
+                    <constraints><allowempty>true</allowempty></constraints>
+                    <control type="edit" format="string"><heading>32178</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="language.Speech-Dispatcher" label="32178" type="string">
+                    <level>4</level>
+                    <constraints><allowempty>true</allowempty></constraints>
+                    <control type="edit" format="string"><heading>32178</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="voice.Speech-Dispatcher" label="32178" type="string">
+                    <level>4</level>
+                    <constraints><allowempty>true</allowempty></constraints>
+                    <control type="edit" format="string"><heading>32178</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="cache_speech.Speech-Dispatcher" label="32178" type="boolean">
+                    <level>4</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="speed.Speech-Dispatcher" label="32178" type="integer">
+                    <level>4</level>
+                    <default>0</default>
+                    <control type="edit" format="integer"><heading>32005</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="pitch.Speech-Dispatcher" label="32178" type="integer">
+                    <level>4</level>
+                    <default>0</default>
+                    <control type="edit" format="integer"><heading>32005</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="inflection.Speech-Dispatcher" label="32178" type="integer">
+                    <level>4</level>
+                    <default>0</default>
+                    <control type="edit" format="integer"><heading>32005</heading></control>
+                    <visible>true</visible>
+                </setting>
+                <setting help="" id="volume.Speech-Dispatcher" label="32178" type="integer">
+                    <level>4</level>
+                    <default>0</default>
+                    <control type="edit" format="integer"><heading>32005</heading></control>
+                    <visible>true</visible>
+                </setting>
                 <setting help="" id="debug_log_level.tts" label="32178" type="integer">
                     <level>4</level>
                     <default>2</default>

@@ -791,6 +791,7 @@
                               <topic_type>heading</topic_type>
                               <heading_labeled_by>inflection</heading_labeled_by>
                               <value_from>internal</value_from>
+                              <units unit="" type="integer" decimal_digits="0"/>
                               <outer_topic>inflection_group</outer_topic>
                               <container_topic>engine_settings</container_topic>
                               <hint_text>Select and use cursor left or right to adjust value</hint_text>
