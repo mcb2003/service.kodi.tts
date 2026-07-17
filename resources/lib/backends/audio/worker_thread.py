@@ -132,6 +132,9 @@ class WorkerThread:
                             phrase.get_text()
                             phrase.add_event('worker.dequeue')
                             engine.say_phrase(phrase)
+                        except ExpiredException:
+                            if MY_LOGGER.isEnabledFor(DEBUG):
+                                MY_LOGGER.debug('Discarded expired phrase')
                         except Exception as e:
                             MY_LOGGER.exception('')
                         continue
