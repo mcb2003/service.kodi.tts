@@ -38,6 +38,7 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
 
     _client = None
     _client_lock = threading.RLock()
+    _client_configuration = None
     _languages_loaded = False
 
     def __init__(self, *args, **kwargs):
@@ -75,6 +76,7 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
                 MY_LOGGER.exception('Closing Speech Dispatcher client failed')
             finally:
                 cls._client = None
+                cls._client_configuration = None
 
     @classmethod
     def list_output_modules(cls) -> List[str]:
@@ -88,37 +90,40 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
             return
 
         client = cls._get_client()
-        for module in cls.list_output_modules():
-            client.set_output_module(module)
-            for voice_name, language, variant in client.list_synthesis_voices():
-                if not language:
-                    continue
-                try:
-                    ietf = langcodes.Language.get(language)
-                except Exception:
-                    MY_LOGGER.warning('Ignoring invalid Speech Dispatcher language: %s',
-                                      language)
-                    continue
+        try:
+            for module in cls.list_output_modules():
+                client.set_output_module(module)
+                for voice_name, language, variant in client.list_synthesis_voices():
+                    if not language:
+                        continue
+                    try:
+                        ietf = langcodes.Language.get(language)
+                    except Exception:
+                        MY_LOGGER.warning('Ignoring invalid Speech Dispatcher language: %s',
+                                          language)
+                        continue
 
-                label = f'{module}: {voice_name}'
-                if variant:
-                    label = f'{label} ({variant})'
-                LanguageInfo.add_language(
-                        engine_key=cls.service_key,
-                        language_id=ietf.language,
-                        country_id=ietf.territory,
-                        ietf=ietf,
-                        region_id='',
-                        gender=Genders.UNKNOWN,
-                        voice=label,
-                        engine_lang_id=language,
-                        # Voices are discovered per output module.  Store the
-                        # module alongside the real synthesis voice so choosing
-                        # a voice also selects the module that provides it.
-                        engine_voice_id=f'{module}\x1f{voice_name}',
-                        engine_name_msg_id=MessageId.ENGINE_SPEECH_DISPATCHER,
-                        engine_quality=3,
-                        voice_quality=3)
+                    label = f'{module}: {voice_name}'
+                    if variant:
+                        label = f'{label} ({variant})'
+                    LanguageInfo.add_language(
+                            engine_key=cls.service_key,
+                            language_id=ietf.language,
+                            country_id=ietf.territory,
+                            ietf=ietf,
+                            region_id='',
+                            gender=Genders.UNKNOWN,
+                            voice=label,
+                            engine_lang_id=language,
+                            # Voices are discovered per output module.  Store the
+                            # module alongside the real synthesis voice so choosing
+                            # a voice also selects the module that provides it.
+                            engine_voice_id=f'{module}\x1f{voice_name}',
+                            engine_name_msg_id=MessageId.ENGINE_SPEECH_DISPATCHER,
+                            engine_quality=3,
+                            voice_quality=3)
+        finally:
+            cls._client_configuration = None
         cls._languages_loaded = True
 
     @classmethod
@@ -132,25 +137,46 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
     @classmethod
     def _configure_client(cls, client) -> None:
         module = cls._setting(SettingProp.MODULE, None)
-        if module:
-            client.set_output_module(module)
-
         language = Settings.get_language(cls.service_key)
-        if language and language != SettingProp.LANGUAGE_DEFAULT:
-            client.set_language(language)
-
         voice = Settings.get_voice(cls.service_key)
         if voice and voice != SettingProp.VOICE_DEFAULT:
             voice_module, separator, voice_name = voice.partition('\x1f')
             if separator:
-                client.set_output_module(voice_module)
+                module = voice_module
                 voice = voice_name
-            client.set_synthesis_voice(voice)
 
-        client.set_rate(int(cls._setting(SettingProp.SPEED, 0)))
-        client.set_pitch(int(cls._setting(SettingProp.PITCH, 0)))
-        client.set_pitch_range(int(cls._setting(SettingProp.INFLECTION, 0)))
-        client.set_volume(int(cls._setting(SettingProp.VOLUME, 0)))
+        if language == SettingProp.LANGUAGE_DEFAULT:
+            language = None
+        if voice == SettingProp.VOICE_DEFAULT:
+            voice = None
+        configuration = (
+                module,
+                language,
+                voice,
+                int(cls._setting(SettingProp.SPEED, 0)),
+                int(cls._setting(SettingProp.PITCH, 0)),
+                int(cls._setting(SettingProp.INFLECTION, 0)),
+                int(cls._setting(SettingProp.VOLUME, 0)),
+        )
+        previous = cls._client_configuration
+        if configuration == previous:
+            return
+
+        if module and (previous is None or module != previous[0]):
+            client.set_output_module(module)
+        if language and (previous is None or language != previous[1]):
+            client.set_language(language)
+        if voice and (previous is None or voice != previous[2]):
+            client.set_synthesis_voice(voice)
+        if previous is None or configuration[3] != previous[3]:
+            client.set_rate(configuration[3])
+        if previous is None or configuration[4] != previous[4]:
+            client.set_pitch(configuration[4])
+        if previous is None or configuration[5] != previous[5]:
+            client.set_pitch_range(configuration[5])
+        if previous is None or configuration[6] != previous[6]:
+            client.set_volume(configuration[6])
+        cls._client_configuration = configuration
 
     def threadedSay(self, phrase: Phrase) -> None:
         if phrase is None or not phrase.text:
