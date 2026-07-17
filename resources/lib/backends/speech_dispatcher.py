@@ -5,6 +5,7 @@ import threading
 
 import langcodes
 import speechd
+from speechd.client import CallbackType
 
 from backends.audio.sound_capabilities import ServiceType
 from backends.base import ThreadedTTSBackend
@@ -40,6 +41,9 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
     _client_lock = threading.RLock()
     _client_configuration = None
     _languages_loaded = False
+    _speech_lock = threading.RLock()
+    _speech_generation = 0
+    _speaking = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,6 +81,46 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
             finally:
                 cls._client = None
                 cls._client_configuration = None
+        cls._reset_speech_state()
+
+    @classmethod
+    def _reset_speech_state(cls) -> None:
+        """Invalidate callbacks associated with a previous client session."""
+        with cls._speech_lock:
+            cls._speech_generation += 1
+            cls._speaking = False
+
+    @classmethod
+    def _begin_speech(cls) -> int:
+        with cls._speech_lock:
+            cls._speech_generation += 1
+            cls._speaking = True
+            return cls._speech_generation
+
+    @classmethod
+    def _finish_speech(cls, generation: int) -> None:
+        with cls._speech_lock:
+            if generation == cls._speech_generation:
+                cls._speaking = False
+
+    @classmethod
+    def _speech_callback(cls, generation: int):
+        """Return the minimal callback required by python-speechd.
+
+        Speech Dispatcher delivers callbacks from its own thread, where the
+        client API must not be called.  State updates are intentionally the
+        only work performed here.
+        """
+        def callback(event_type, **_kwargs) -> None:
+            if event_type in (CallbackType.END, CallbackType.CANCEL):
+                cls._finish_speech(generation)
+
+        return callback
+
+    @classmethod
+    def _is_speaking(cls) -> bool:
+        with cls._speech_lock:
+            return cls._speaking
 
     @classmethod
     def list_output_modules(cls) -> List[str]:
@@ -178,19 +222,37 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
             client.set_volume(configuration[6])
         cls._client_configuration = configuration
 
+    def _speak(self, client, phrase: Phrase) -> None:
+        """Submit one current phrase and retain its lifecycle state."""
+        text = phrase.get_text()
+        if not text:
+            return
+        generation = type(self)._begin_speech()
+        try:
+            phrase.add_event('speechd.speak')
+            client.speak(
+                    text,
+                    callback=type(self)._speech_callback(generation),
+                    event_types=(CallbackType.END, CallbackType.CANCEL))
+        except Exception:
+            type(self)._finish_speech(generation)
+            raise
+        if MY_LOGGER.isEnabledFor(DEBUG_V):
+            MY_LOGGER.debug_v(f'Speech pipeline: {phrase.history()}')
+
     def threadedSay(self, phrase: Phrase) -> None:
-        if phrase is None or not phrase.text:
+        if phrase is None:
             return
         try:
             with type(self)._client_lock:
                 client = type(self)._get_client()
                 type(self)._configure_client(client)
                 if phrase.get_interrupt():
+                    type(self)._reset_speech_state()
                     client.cancel()
-                phrase.add_event('speechd.speak')
-                client.speak(phrase.text)
-                if MY_LOGGER.isEnabledFor(DEBUG_V):
-                    MY_LOGGER.debug_v(f'Speech pipeline: {phrase.history()}')
+                self._speak(client, phrase)
+        except ExpiredException:
+            return
         except Exception:
             # Reconnect once after a daemon restart or a stale user socket.
             type(self).close_client()
@@ -198,17 +260,23 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
                 with type(self)._client_lock:
                     client = type(self)._get_client()
                     type(self)._configure_client(client)
-                    client.speak(phrase.text)
+                    self._speak(client, phrase)
+            except ExpiredException:
+                return
             except Exception:
                 MY_LOGGER.exception('Speech Dispatcher failed to speak')
 
     def stop(self) -> None:
         try:
+            type(self)._reset_speech_state()
             with type(self)._client_lock:
                 client = type(self)._get_client()
                 client.cancel()
         except Exception:
             MY_LOGGER.exception('Speech Dispatcher failed to cancel speech')
+
+    def isSpeaking(self) -> bool:
+        return type(self)._is_speaking() or super().isSpeaking()
 
     def destroy(self) -> None:
         self.stop()
