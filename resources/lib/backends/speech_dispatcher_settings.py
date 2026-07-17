@@ -13,7 +13,7 @@ from common.config_exception import UnusableServiceException
 from common.logger import BasicLogger
 from common.message_ids import MessageId
 from common.service_status import Progress, ServiceStatus, StatusType
-from common.setting_constants import AudioType, Backends, PlayerMode
+from common.setting_constants import AudioType, Backends, PlayerMode, Players
 from common.system_queries import SystemQueries
 
 MY_LOGGER = BasicLogger.get_logger(__name__)
@@ -64,6 +64,15 @@ class SpeechDispatcherSettings:
         StringValidator(cls.service_key.with_prop(SettingProp.PLAYER_MODE),
                         allowed_values=[PlayerMode.ENGINE_SPEAK.value],
                         default=PlayerMode.ENGINE_SPEAK.value,
+                        const=True, define_setting=True, service_status=StatusType.OK,
+                        persist=False)
+        # Configure treats every engine as having a player, even when the
+        # engine speaks directly.  The built-in player is the framework's
+        # representation of that direct-speech path; it does not send audio to
+        # Kodi or an external media player.
+        StringValidator(cls.service_key.with_prop(SettingProp.PLAYER),
+                        allowed_values=[Players.BUILT_IN],
+                        default=Players.BUILT_IN,
                         const=True, define_setting=True, service_status=StatusType.OK,
                         persist=False)
 
