@@ -108,13 +108,12 @@ class EngineQueue:
         #  if MY_LOGGER.isEnabledFor(DEBUG):
         #      MY_LOGGER.debug(f'Threaded EngineQueue started')
         try:
-            while self.active_queue and not Monitor.wait_for_abort(timeout=0.02):
+            while self.active_queue and not Monitor.is_abort_requested():
                 item: EngineQueue.QueueItem | None = None
                 try:
-                    item = self.tts_queue.get(timeout=0.0)
+                    item = self.tts_queue.get(timeout=0.25)
                     if MY_LOGGER.isEnabledFor(DEBUG):
                         MY_LOGGER.debug(f'Queue item phrase: {item.phrase}')
-                    self.tts_queue.task_done()  # TODO: Change this to use phrase delays
                     phrase: Phrase = item.phrase
                     if (clz.kodi_player_state == KodiPlayerState.PLAYING_VIDEO and not
                             phrase.speak_over_kodi):
@@ -149,6 +148,9 @@ class EngineQueue:
                                           trace=Trace.TRACE_AUDIO_START_STOP)
                 except Exception:
                     MY_LOGGER.exception('')
+                finally:
+                    if item is not None:
+                        self.tts_queue.task_done()
         except AbortException:
             return  # Let thread die
 
@@ -292,8 +294,7 @@ class EngineQueue:
 
     @classmethod
     def stop(cls) -> None:
-        pass
-        # cls._instance.empty_queue()
+        cls.empty_queue()
 
     @classmethod
     def close(cls) -> None:

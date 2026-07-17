@@ -52,9 +52,9 @@ class Driver(BaseServices):
     def __init__(self):
         clz = type(self)
         if not clz._initialized:
-            self.worker_thread: WorkerThread = WorkerThread('worker',
-                                                            task=None)
+            clz.worker_thread = WorkerThread('worker', task=None)
             clz._initialized = True
+        self.worker_thread: WorkerThread = clz.worker_thread
         super().__init__()
 
     def say(self, phrases: PhraseList) -> None:
@@ -80,7 +80,7 @@ class Driver(BaseServices):
         # Initiates typically multi-step process to voice some text
 
         clz = type(self)
-        Monitor.exception_on_abort(0.05)
+        Monitor.exception_on_abort()
         active_engine: BaseEngineService | None = None
         try:
             result: Result | None = None
@@ -108,7 +108,8 @@ class Driver(BaseServices):
                     if MY_LOGGER.isEnabledFor(DEBUG):
                         MY_LOGGER.debug(f'INTERRUPT Driver.Say {phrases[0].get_text()}')
                     phrases.expire_all_prior()
-                    # self.worker_thread.interrupt()
+                    self.worker_thread.discard_pending_playback()
+                    active_engine.stop()
             except ExpiredException:
                 if MY_LOGGER.isEnabledFor(DEBUG):
                     MY_LOGGER.debug('Expired at Interrupt')
@@ -190,6 +191,7 @@ class Driver(BaseServices):
     def close(self):
         clz = type(self)
         try:
+            self.worker_thread.close()
             engine_key: ServiceID = Settings.get_engine_key()
             active_engine = BaseServices.get_service(engine_key)
             active_engine.close()
