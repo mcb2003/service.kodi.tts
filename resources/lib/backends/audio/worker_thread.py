@@ -126,6 +126,10 @@ class WorkerThread:
                         #                 f'engine_key: {engine_key}')
                         try:
                             engine: IServices = BaseServices.get_service(engine_key)
+                            # An interrupt can expire a phrase after it has
+                            # entered this queue.  Validate at the hand-off so
+                            # stale work never reaches an engine.
+                            phrase.get_text()
                             phrase.add_event('worker.dequeue')
                             engine.say_phrase(phrase)
                         except Exception as e:

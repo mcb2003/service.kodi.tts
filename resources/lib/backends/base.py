@@ -127,6 +127,10 @@ class EngineQueue:
                         MY_LOGGER.debug(f'Start play of {phrase.debug_data()} '
                                         f'on {item.engine.service_id}')
                                         #  trace=Trace.TRACE_AUDIO_START_STOP)
+                    # A later interrupt may have expired this phrase while it
+                    # waited in the engine queue.  Do not let stale work cross
+                    # into an asynchronous engine or player.
+                    phrase.get_text()
                     self._threadedIsSpeaking = True
                     engine: 'SimpleTTSBackend' = item.engine
                     # MY_LOGGER.debug(f'queue.get {phrase.get_text()} '
