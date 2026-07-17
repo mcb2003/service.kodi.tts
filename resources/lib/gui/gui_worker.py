@@ -81,11 +81,10 @@ class GuiWorkerQueue:
         if MY_LOGGER.isEnabledFor(DEBUG):
             MY_LOGGER.debug_v(f'Threaded GuiWorkerQueue started')
         try:
-            while self.active_queue and not Monitor.wait_for_abort(timeout=0.1):
+            while self.active_queue and not Monitor.is_abort_requested():
                 item: GuiWorkerQueue.QueueItem | None = None
                 try:
-                    item = self.topics_queue.get(timeout=0.0)
-                    self.topics_queue.task_done()
+                    item = self.topics_queue.get(timeout=0.25)
                     clz.sequence_number += 1
                     GuiWorker.process_queue(item.windialog_state,
                                             clz.sequence_number)
@@ -98,6 +97,9 @@ class GuiWorkerQueue:
                     MY_LOGGER.exception('')
                 except Exception:
                     MY_LOGGER.exception('')
+                finally:
+                    if item is not None:
+                        self.topics_queue.task_done()
         except AbortException:
             return  # Let thread die
 

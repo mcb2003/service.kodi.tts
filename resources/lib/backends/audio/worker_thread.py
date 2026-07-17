@@ -2,7 +2,7 @@
 from __future__ import annotations  # For union operator |
 
 from queue import Empty as EmptyQueue, Full as FullQueue, Queue
-from threading import Thread
+from threading import RLock, Thread
 
 from backends.players.iplayer import IPlayer
 from backends.players.player_index import PlayerIndex
@@ -50,6 +50,8 @@ class WorkerThread:
         self.idle_count: int = 0
         self.task: callable = task
         self.kwargs = kwargs
+        self._queue_lock = RLock()
+        self._closed = False
 
         self.thread = Thread(target=self.process_queue, name=thread_name)
         self.thread_started: bool = False
@@ -57,35 +59,63 @@ class WorkerThread:
     def add_to_queue(self, tts_data: TTSQueueData) -> None:
         clz = type(self)
         try:
-            if MY_LOGGER.isEnabledFor(DEBUG_V):
-                MY_LOGGER.debug_v(f'tts_data: {tts_data.data}')
-            if not self.thread_started:
-                self.thread.start()
-                self.thread_started = True
-            self.queue.put_nowait(tts_data)
-            self.queueCount += 1
+            with self._queue_lock:
+                if self._closed:
+                    return
+                if MY_LOGGER.isEnabledFor(DEBUG_V):
+                    MY_LOGGER.debug_v(f'tts_data: {tts_data.data}')
+                if not self.thread_started:
+                    self.thread.start()
+                    self.thread_started = True
+                self.queue.put_nowait(tts_data)
+                self.queueCount += 1
         except FullQueue as e:
             self.queueFullCount += 1
         except Exception as e:
             MY_LOGGER.exception('')
 
+    def discard_pending_playback(self) -> None:
+        """Drop queued speech while retaining background cache work."""
+        retained: list[TTSQueueData] = []
+        with self._queue_lock:
+            while True:
+                try:
+                    data = self.queue.get_nowait()
+                except EmptyQueue:
+                    break
+                self.queue.task_done()
+                if data.get_kwargs().get('state') != 'play_file':
+                    retained.append(data)
+            for data in retained:
+                self.queue.put_nowait(data)
+
+    def close(self) -> None:
+        with self._queue_lock:
+            self._closed = True
+            if not self.thread_started:
+                return
+            while True:
+                try:
+                    self.queue.get_nowait()
+                except EmptyQueue:
+                    break
+                self.queue.task_done()
+            self.queue.put_nowait(None)
+
     def process_queue(self):
         clz = type(self)
         data: TTSQueueData | None = None
         try:
-            delay: float = 0.05
-            while not Monitor.wait_for_abort(delay):
+            while not Monitor.is_abort_requested():
                 try:
-                    data = self.queue.get_nowait()
-                    self.queue.task_done()
-                    delay = 0.05
+                    data = self.queue.get(timeout=0.25)
                     self.idle_count = 0
                 except EmptyQueue as e:
                     self.idle_count += 1
-                    if self.idle_count > (5.0 / 0.05):
-                        delay = 0.10
                     continue
                 try:
+                    if data is None:
+                        return
                     kwargs: Dict[str, Any] = data.get_kwargs()
                     if kwargs['state'] == 'play_file':
                         player_key: ServiceID = kwargs.get('player_key')
@@ -121,6 +151,8 @@ class WorkerThread:
                     return  # Exit thread
                 except Exception as e:
                     MY_LOGGER.exception('')
+                finally:
+                    self.queue.task_done()
 
         except AbortException as e:
             pass  # Let thread exit
