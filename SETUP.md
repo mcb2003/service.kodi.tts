@@ -24,6 +24,14 @@ Optionally install eSpeak-NG, which is typically available from your distributio
 
 Almost certainly mpv, eSpeak and mplayer are available from your normal Linux distribution channels. They should be easy to find and install.
 
+#### Speech Dispatcher
+
+Kodi TTS can also speak directly through [Speech Dispatcher](https://devel.freebsoft.org/speechd). This avoids creating an audio file and using a media player for each utterance. Install both the Speech Dispatcher daemon and its Python client from your distribution (often named **speech-dispatcher** and **python3-speechd** or similar), ensuring that Kodi's Python interpreter can import `speechd`.
+
+On first use, Kodi TTS connects to Speech Dispatcher's normal per-user socket at `$XDG_RUNTIME_DIR/speech-dispatcher/speechd.sock`. If it cannot connect, the Python client requests a local daemon through Speech Dispatcher's normal autospawn mechanism. Existing system- or user-managed services continue to be used without starting another daemon.
+
+For a non-default socket or a remote server, set `SPEECHD_ADDRESS` in Kodi's environment. Speech Dispatcher address examples are `unix_socket:/run/user/1000/speech-dispatcher/speechd.sock` and `inet_socket:127.0.0.1:6560`. Select **Speech Dispatcher** in Kodi TTS's Ctrl+F12 configuration dialog, then choose its output module, language, voice, rate, pitch, inflection, and volume.
+
 ### Windows
 
 Windows TTS (Navigator) is fairly high quality, runs locally and is builtin. It does require a Powershell script to use, which must be configured.

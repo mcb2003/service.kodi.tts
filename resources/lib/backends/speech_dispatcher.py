@@ -49,10 +49,12 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
 
     @classmethod
     def _new_client(cls):
-        # autospawn must stay disabled: on a desktop or HTPC, NixOS owns the
-        # daemon and determines its audio configuration.
+        # Leave autospawn at Speech Dispatcher's default.  This first connects
+        # to the standard per-user XDG socket (or SPEECHD_ADDRESS), and starts
+        # a local daemon only if no server is already available.  Distributions
+        # that manage a user service therefore keep using it unchanged.
         return speechd.SSIPClient('Kodi Screen Reader', component='kodi-tts',
-                                  autospawn=False)
+                                  autospawn=None)
 
     @classmethod
     def _get_client(cls):
