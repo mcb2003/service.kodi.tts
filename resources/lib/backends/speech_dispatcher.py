@@ -53,7 +53,8 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
         # to the standard per-user XDG socket (or SPEECHD_ADDRESS), and starts
         # a local daemon only if no server is already available.  Distributions
         # that manage a user service therefore keep using it unchanged.
-        return speechd.SSIPClient('Kodi Screen Reader', component='kodi-tts',
+        # SSIP client-name components may not contain whitespace.
+        return speechd.SSIPClient('Kodi-Screen-Reader', component='kodi-tts',
                                   autospawn=None)
 
     @classmethod
