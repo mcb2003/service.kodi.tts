@@ -68,9 +68,9 @@
                 <setting help="" id="poll_interval.tts" label="32048"
                          type="integer">
                     <level>4</level>
-                    <default>100</default>
+                    <default>50</default>
                     <constraints>
-                        <minimum>50</minimum>
+                        <minimum>10</minimum>
                         <maximum>1000</maximum>
                     </constraints>
                     <control format="integer" type="slider">

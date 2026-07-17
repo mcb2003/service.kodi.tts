@@ -179,7 +179,7 @@ class BaseServiceSettings:
         # Poll interval in milliseconds
         poll_interval_val: IntValidator
         poll_interval_val = IntValidator(ServiceKey.POLL_INTERVAL,
-                                         min_value=0, max_value=1000, default=100,
+                                         min_value=10, max_value=1000, default=50,
                                          step=1, scale_internal_to_external=1,
                                          define_setting=True,
                                          service_status=StatusType.OK,
