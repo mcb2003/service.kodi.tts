@@ -37,6 +37,10 @@ msgctxt "#32004"
 msgid "Rate"
 msgstr "Rate"
 
+msgctxt "#32348"
+msgid "Inflection"
+msgstr "Inflection"
+
 msgctxt "#32005"
 msgid "Pitch"
 msgstr "Pitch"

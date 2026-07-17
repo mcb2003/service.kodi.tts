@@ -16,6 +16,7 @@ class MessageId(Enum):
     # The following tree values MUST be the same as in VoiceHintToggle
     ENGINE_LABEL = 32001
     VOLUME_LABEL = 32014
+    RATE = 32004
     VOICE_HINT_OFF = 32050
     VOICE_HINT_ON = 32051
     VOICE_HINT_PAUSE = 32052
@@ -81,6 +82,7 @@ class MessageId(Enum):
     ENGINE_RESPONSIVE_VOICE = 32317
     ENGINE_SAPI = 32329
     ENGINE_SPEECH_DISPATCHER = 32318
+    INFLECTION = 32348
     ENGINE_INTERNAL = 32326
     ENGINE_LOG_ONLY = 32327
     CONVERT_PICO_TO_WAV = 32328

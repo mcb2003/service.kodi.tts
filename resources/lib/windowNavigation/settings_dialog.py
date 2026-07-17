@@ -21,6 +21,7 @@ from common.message_ids import MessageId
 from common.messages import Messages
 from common.setting_constants import (Backends, Genders)
 from common.settings import Settings
+from common.settings_low_level import SettingsLowLevel
 from utils.util import get_language_code
 from windowNavigation.action_map import Action
 from windowNavigation.choice import Choice
@@ -62,6 +63,9 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
     SELECT_PITCH_GROUP: Final[int] = 1114
     SELECT_PITCH_LABEL: Final[int] = 114
     SELECT_PITCH_SLIDER: Final[int] = 115
+    SELECT_INFLECTION_GROUP: Final[int] = 1124
+    SELECT_INFLECTION_LABEL: Final[int] = 124
+    SELECT_INFLECTION_SLIDER: Final[int] = 125
     SELECT_SPEED_GROUP: Final[int] = 1116
     SELECT_SPEED_LABEL: Final[int] = 116
     SELECT_SPEED_SLIDER: Final[int] = 117
@@ -73,7 +77,7 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
     SELECT_API_KEY_GROUP: Final[int] = 1122
     SELECT_API_KEY_LABEL: Final[int] = 122
     SELECT_API_KEY_EDIT: Final[int] = 123
-    LAST_SELECT_ID: Final[int] = SELECT_API_KEY_EDIT
+    LAST_SELECT_ID: Final[int] = SELECT_INFLECTION_SLIDER
     # OPTIONS_GROUP: Final[int] = 201
     # OPTIONS_DUMMY_BUTTON: Final[int] = 202
     # KEYMAP_GROUP: Final[int] = 301
@@ -309,8 +313,14 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                         clz.SELECT_PITCH_LABEL)
                 self.engine_pitch_slider = self.get_control_slider(
                         clz.SELECT_PITCH_SLIDER)
-                # Disable setting pitch for now
+                self.engine_inflection_group = self.get_control_group(
+                        clz.SELECT_INFLECTION_GROUP)
+                self.engine_inflection_label = self.get_control_label(
+                        clz.SELECT_INFLECTION_LABEL)
+                self.engine_inflection_slider = self.get_control_slider(
+                        clz.SELECT_INFLECTION_SLIDER)
                 self.engine_pitch_group.setVisible(False)
+                self.engine_inflection_group.setVisible(False)
 
                 # NOTE: player and module share control. Only one active at a
                 #       time. Probably should create two distinct buttons and
@@ -899,6 +909,8 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                 self.select_gender()
             elif controlId == clz.SELECT_PITCH_SLIDER:
                 self.select_pitch()
+            elif controlId == clz.SELECT_INFLECTION_SLIDER:
+                self.select_inflection()
             elif controlId == clz.SELECT_PLAYER_BUTTON:
                 if SettingsMap.is_valid_setting(
                         self.engine_key.with_prop(SettingProp.PLAYER)):
@@ -1315,6 +1327,9 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         """
 
         """
+        if self._is_speech_dispatcher():
+            self._select_speech_dispatcher_numeric(
+                    SettingProp.PITCH, self.engine_pitch_slider)
         return
     '''
         try:
@@ -1334,6 +1349,11 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         """
 
         """
+        if self._is_speech_dispatcher():
+            self._set_speech_dispatcher_numeric_field(
+                    SettingProp.PITCH, self.engine_pitch_group,
+                    self.engine_pitch_label, self.engine_pitch_slider,
+                    MessageId.PITCH.get_msg())
         return
     '''
         try:
@@ -1503,6 +1523,10 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         Configures the global volume of all engines
         """
         try:
+            if self._is_speech_dispatcher():
+                self._select_speech_dispatcher_numeric(
+                        SettingProp.VOLUME, self.engine_volume_slider)
+                return
             volume: float = self.engine_volume_slider.getFloat()
             self.set_volume_field(update_ui=True, volume=volume)
         except Exception as e:
@@ -1516,6 +1540,12 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                            set get volume from Settings
         """
         try:
+            if self._is_speech_dispatcher():
+                self._set_speech_dispatcher_numeric_field(
+                        SettingProp.VOLUME, self.engine_volume_group,
+                        self.engine_volume_label, self.engine_volume_slider,
+                        MessageId.VOLUME_LABEL.get_msg())
+                return
             if not SettingsMap.is_valid_setting(ServiceKey.TTS_KEY.with_prop(
                                                                      SettingProp.VOLUME)):
                 if MY_LOGGER.isEnabledFor(DEBUG):
@@ -1565,6 +1595,10 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         Configures the speed of all engines (globally shared property)
         """
         try:
+            if self._is_speech_dispatcher():
+                self._select_speech_dispatcher_numeric(
+                        SettingProp.SPEED, self.engine_speed_slider)
+                return
             speed: float = self.engine_speed_slider.getFloat()
             self.set_speed_field(update_ui=True, speed=speed)
         except Exception as e:
@@ -1577,6 +1611,17 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
                           from Settings
         """
         try:
+            if self._is_speech_dispatcher():
+                self._set_speech_dispatcher_numeric_field(
+                        SettingProp.SPEED, self.engine_speed_group,
+                        self.engine_speed_label, self.engine_speed_slider,
+                        MessageId.RATE.get_msg())
+                self._set_speech_dispatcher_numeric_field(
+                        SettingProp.INFLECTION, self.engine_inflection_group,
+                        self.engine_inflection_label,
+                        self.engine_inflection_slider,
+                        MessageId.INFLECTION.get_msg())
+                return
             if not SettingsMap.is_valid_setting(ServiceKey.TTS_KEY.with_prop(
                                                                     SettingProp.SPEED)):
                 self.engine_speed_group.setVisible(False)
@@ -2076,14 +2121,46 @@ class SettingsDialog(xbmcgui.WindowXMLDialog):
         :return:
         """
         if update_ui:
-            if True or not SettingsMap.is_valid_setting(engine_key.with_prop(
+            if not self._is_speech_dispatcher() and not SettingsMap.is_valid_setting(engine_key.with_prop(
                                                         SettingProp.PITCH)):
                 self.engine_pitch_group.setVisible(False)
             else:
-                self.cfg.set_pitch_field(engine_key=engine_key, pitch=pitch)
-                label: str = MessageId.PITCH.get_formatted_msg(f'{pitch:.1f}')
-                self.engine_pitch_label.setLabel(label)
-                self.engine_pitch_group.setVisible(True)
+                if self._is_speech_dispatcher():
+                    self._set_speech_dispatcher_numeric_field(
+                            SettingProp.PITCH, self.engine_pitch_group,
+                            self.engine_pitch_label, self.engine_pitch_slider,
+                            MessageId.PITCH.get_msg())
+                else:
+                    self.cfg.set_pitch_field(engine_key=engine_key, pitch=pitch)
+                    label: str = MessageId.PITCH.get_formatted_msg(f'{pitch:.1f}')
+                    self.engine_pitch_label.setLabel(label)
+                    self.engine_pitch_group.setVisible(True)
+
+    def _is_speech_dispatcher(self) -> bool:
+        return self.engine_key.service_id == Backends.SPEECH_DISPATCHER_ID
+
+    def _select_speech_dispatcher_numeric(self, setting: str,
+                                           slider: ControlSlider) -> None:
+        value = max(-100, min(100, slider.getInt()))
+        SettingsLowLevel.set_setting_int(self.engine_key.with_prop(setting), value)
+        self.update_engine_values()
+
+    def _set_speech_dispatcher_numeric_field(self, setting: str,
+                                              group: ControlGroup,
+                                              label: ControlLabel,
+                                              slider: ControlSlider,
+                                              title: str) -> None:
+        value = SettingsLowLevel.get_setting_int(
+                self.engine_key.with_prop(setting), 0)
+        value = max(-100, min(100, value))
+        slider.setInt(value, -100, 5, 100)
+        label.setLabel(f'{title}: {value}')
+        group.setVisible(True)
+
+    def select_inflection(self) -> None:
+        if self._is_speech_dispatcher():
+            self._select_speech_dispatcher_numeric(
+                    SettingProp.INFLECTION, self.engine_inflection_slider)
 
     def set_gender_field(self, update_ui: bool, engine_key: ServiceID):
         """

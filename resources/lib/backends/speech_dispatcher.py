@@ -11,13 +11,13 @@ from backends.base import ThreadedTTSBackend
 from backends.settings.language_info import LanguageInfo
 from backends.settings.service_types import ServiceKey, Services
 from backends.settings.setting_properties import SettingProp
-from backends.settings.settings_map import SettingsMap
 from common import *
 from common.logger import BasicLogger
 from common.message_ids import MessageId
 from common.phrases import Phrase
-from common.setting_constants import Backends
+from common.setting_constants import Backends, Genders
 from common.settings import Settings
+from common.settings_low_level import SettingsLowLevel
 
 MY_LOGGER = BasicLogger.get_logger(__name__)
 
@@ -97,19 +97,22 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
                                       language)
                     continue
 
-                label = voice_name
+                label = f'{module}: {voice_name}'
                 if variant:
-                    label = f'{voice_name} ({variant})'
+                    label = f'{label} ({variant})'
                 LanguageInfo.add_language(
                         engine_key=cls.service_key,
                         language_id=ietf.language,
                         country_id=ietf.territory,
                         ietf=ietf,
                         region_id='',
-                        gender=None,
+                        gender=Genders.UNKNOWN,
                         voice=label,
                         engine_lang_id=language,
-                        engine_voice_id=voice_name,
+                        # Voices are discovered per output module.  Store the
+                        # module alongside the real synthesis voice so choosing
+                        # a voice also selects the module that provides it.
+                        engine_voice_id=f'{module}\x1f{voice_name}',
                         engine_name_msg_id=MessageId.ENGINE_SPEECH_DISPATCHER,
                         engine_quality=3,
                         voice_quality=3)
@@ -117,13 +120,11 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
 
     @classmethod
     def _setting(cls, setting: str, default):
-        validator = SettingsMap.get_validator(cls.service_key.with_prop(setting))
-        if validator is None:
-            return default
-        try:
-            return validator.get_tts_value(default)
-        except TypeError:
-            return validator.get_tts_value()
+        key = cls.service_key.with_prop(setting)
+        if isinstance(default, int):
+            return SettingsLowLevel.get_setting_int(key, default)
+        return SettingsLowLevel.get_setting_str(key, load_on_demand=True,
+                                                default=default)
 
     @classmethod
     def _configure_client(cls, client) -> None:
@@ -137,6 +138,10 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
 
         voice = Settings.get_voice(cls.service_key)
         if voice and voice != SettingProp.VOICE_DEFAULT:
+            voice_module, separator, voice_name = voice.partition('\x1f')
+            if separator:
+                client.set_output_module(voice_module)
+                voice = voice_name
             client.set_synthesis_voice(voice)
 
         client.set_rate(int(cls._setting(SettingProp.SPEED, 0)))

@@ -6,8 +6,7 @@ from backends.engines.base_engine_settings import BaseEngineSettings
 from backends.settings.service_types import ServiceKey, Services, ServiceType
 from backends.settings.setting_properties import SettingProp, SettingType
 from backends.settings.settings_map import Status, SettingsMap
-from backends.settings.validators import (NumericValidator, SimpleStringValidator,
-                                          StringValidator)
+from backends.settings.validators import SimpleStringValidator, StringValidator
 from backends.speech_dispatcher import SpeechDispatcherTTSBackend
 from common import *
 from common.config_exception import UnusableServiceException
@@ -74,10 +73,13 @@ class SpeechDispatcherSettings:
                 SettingProp.INFLECTION,
                 SettingProp.VOLUME,
         ]:
-            NumericValidator(cls.service_key.with_prop(setting), minimum=-100,
-                             maximum=100, default=0, is_decibels=False,
-                             is_integer=True, increment=5, define_setting=True,
-                             service_status=StatusType.OK, persist=True)
+            # Speech Dispatcher uses its own -100 through 100 scale.  Do not
+            # use NumericValidator here: that validator is deliberately bound
+            # to Kodi TTS's global rate/volume conversion settings.
+            SettingsMap.define_setting(cls.service_key.with_prop(setting),
+                                       setting_type=SettingType.INTEGER_TYPE,
+                                       service_status=StatusType.OK,
+                                       persist=True)
 
         SettingsMap.define_setting(cls.service_key.with_prop(SettingProp.CACHE_SPEECH),
                                    setting_type=SettingType.BOOLEAN_TYPE,

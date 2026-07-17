@@ -715,7 +715,7 @@
                               <topic_left/>
                               <topic_right/>
                               <topic_up>volume</topic_up>
-                              <topic_down>speed_value</topic_down>
+                              <topic_down>inflection_value</topic_down>
                            </topic>
                            <description>Pitch Label</description>
                            <width>850</width>
@@ -742,7 +742,7 @@
                               <topic_left/>
                               <topic_right/>
                               <topic_up>volume</topic_up>
-                              <topic_down>speed_value</topic_down>
+                              <topic_down>inflection_value</topic_down>
                            </topic>
                            <width>730</width>
                            <right>0</right>
@@ -754,7 +754,7 @@
                            <!-- <onleft>100</onleft>
                            <onright>300</onright> -->
                            <onup>113</onup>
-                           <ondown>117</ondown>
+                           <ondown>125</ondown>
                            <texturesliderbar>osd_slider_bg_2.png</texturesliderbar>
                            <textureslidernib>osd_slider_nibNF.png</textureslidernib>
                            <textureslidernibfocus>osd_slider_nib.png</textureslidernibfocus>
@@ -763,6 +763,54 @@
                            <texturesliderbar>mybackgroundtexture.png</texturesliderbar>
                            <textureslidernib>mydowntexture.png</textureslidernib>
                            <textureslidernibfocus>mydownfocustexture.png</textureslidernibfocus> -->
+                           <controloffsetx/>
+                           <controloffsety/>
+                        </control>
+                     </control>
+                     <!-- Speech Dispatcher uses pitch range as inflection. -->
+                     <control type="group" id="1124">
+                        <topic name="inflection_group" rank="6">
+                           <outer_topic>engine_settings</outer_topic>
+                        </topic>
+                        <height>34</height>
+                        <defaultcontrol>125</defaultcontrol>
+                        <control type="label" id="124">
+                           <description>Inflection Label</description>
+                           <width>850</width>
+                           <label>$LOCALIZE[32348]</label>
+                           <visible>true</visible>
+                           <alignx>left</alignx>
+                           <aligny>center</aligny>
+                           <font>font12_title</font>
+                           <textcolor>white</textcolor>
+                           <shadowcolor>black</shadowcolor>
+                        </control>
+                        <control type="slider" id="125">
+                           <description>Inflection</description>
+                           <topic name="inflection_value" rank="7">
+                              <topic_type>heading</topic_type>
+                              <heading_labeled_by>inflection</heading_labeled_by>
+                              <value_from>internal</value_from>
+                              <outer_topic>inflection_group</outer_topic>
+                              <container_topic>engine_settings</container_topic>
+                              <hint_text>Select and use cursor left or right to adjust value</hint_text>
+                              <topic_left/>
+                              <topic_right/>
+                              <topic_up>pitch_value</topic_up>
+                              <topic_down>speed_value</topic_down>
+                           </topic>
+                           <width>730</width>
+                           <right>0</right>
+                           <orientation>horizontal</orientation>
+                           <visible>true</visible>
+                           <alignx>left</alignx>
+                           <aligny>center</aligny>
+                           <font>font12_title</font>
+                           <onup>115</onup>
+                           <ondown>117</ondown>
+                           <texturesliderbar>osd_slider_bg_2.png</texturesliderbar>
+                           <textureslidernib>osd_slider_nibNF.png</textureslidernib>
+                           <textureslidernibfocus>osd_slider_nib.png</textureslidernibfocus>
                            <controloffsetx/>
                            <controloffsety/>
                         </control>
@@ -781,7 +829,7 @@
                               <hint_text>Select to choose speed</hint_text>
                               <topic_left/>
                               <topic_right/>
-                              <topic_up>pitch_value</topic_up>
+                              <topic_up>inflection_value</topic_up>
                               <topic_down/>
                            </topic>
                            <width>850</width>
@@ -809,7 +857,7 @@
                               <units unit="" type="float" decimal_digits="1"/>
                               <topic_left/>
                               <topic_right/>
-                              <topic_up>pitch_value</topic_up>
+                              <topic_up>inflection_value</topic_up>
                               <topic_down/>
                            </topic>
                            <width>730</width>
@@ -821,7 +869,7 @@
                            <font>font12_title</font>
                            <!-- <onleft>100</onleft>
                            <onright>300</onright> -->
-                           <onup>115</onup>
+                           <onup>125</onup>
                            <ondown>118</ondown>
                            <orientation>horizontal</orientation>
                            <texturesliderbar>osd_slider_bg_2.png</texturesliderbar>
