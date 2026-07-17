@@ -85,6 +85,7 @@ class Driver(BaseServices):
         try:
             result: Result | None = None
             mode: Mode
+            phrases.add_event('driver.enqueue')
             engine_servc_id: ServiceID = Settings.get_engine_key()
             #  MY_LOGGER.debug(f'engine_servc_id: {engine_servc_id}')
             if engine_servc_id is None:
@@ -104,7 +105,6 @@ class Driver(BaseServices):
                                     f'{active_engine.service_id}')
             try:
                 if phrases.interrupt:  # Interrupt should only be on first phrase
-                    phrases.add_event('driver.say')
                     if MY_LOGGER.isEnabledFor(DEBUG):
                         MY_LOGGER.debug(f'INTERRUPT Driver.Say {phrases[0].get_text()}')
                     phrases.expire_all_prior()

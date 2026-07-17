@@ -2,9 +2,9 @@
 
 from __future__ import annotations  # For union operator |
 
-from datetime import datetime, timedelta
 import hashlib
 import inspect
+import time
 #  TODO: change to regex
 import pathlib
 import re
@@ -44,16 +44,13 @@ class MyEncoder(JSONEncoder):
 
 class PhraseEvent:
 
-    def __init__(self, event: str) -> None:
+    def __init__(self, event: str, origin: float) -> None:
         self._event: str = event
-        self._ts: datetime = datetime.now()
+        self._elapsed_ms = int((time.monotonic() - origin) * 1000)
 
     @property
     def event(self) -> str:
-        now: datetime = datetime.now()
-        elapsed: timedelta = now - self._ts
-        milliseconds: int = int(elapsed.microseconds / 1000)
-        return f'{self._event} elapsed: {milliseconds}ms'
+        return f'{self._event} +{self._elapsed_ms}ms'
 
     def __str__(self) -> str:
         return f'{self.event}'
@@ -171,6 +168,7 @@ class Phrase:
         clz = type(self)
         Monitor.exception_on_abort()
         debug_context += 1
+        self._created_at = time.monotonic()
         self.text: str = clz.clean_phrase_text(text)
         # if self.text == '':
         #     MY_LOGGER.debug(f'empty text')
@@ -428,7 +426,7 @@ class Phrase:
                f' expires: {self.check_expired}'
 
     def add_event(self, detail: str) -> None:
-        self._events.append(PhraseEvent(detail))
+        self._events.append(PhraseEvent(detail, self._created_at))
 
     def get_last_event(self) -> str:
         return f'{self._events[-1]}'

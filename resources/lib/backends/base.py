@@ -131,6 +131,9 @@ class EngineQueue:
                     engine: 'SimpleTTSBackend' = item.engine
                     # MY_LOGGER.debug(f'queue.get {phrase.get_text()} '
                     #                   f'engine: {item.engine.setting_id}')
+                    phrase.add_event('engine.dequeue')
+                    if MY_LOGGER.isEnabledFor(DEBUG_V):
+                        MY_LOGGER.debug_v(f'Speech pipeline: {phrase.history()}')
                     engine.threadedSay(phrase)
                     #  MY_LOGGER.debug(f'Return from threadedSay {phrase.debug_data()}',
                     #                    trace=Trace.TRACE_AUDIO_START_STOP)

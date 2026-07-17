@@ -187,7 +187,10 @@ class SpeechDispatcherTTSBackend(ThreadedTTSBackend):
                 type(self)._configure_client(client)
                 if phrase.get_interrupt():
                     client.cancel()
+                phrase.add_event('speechd.speak')
                 client.speak(phrase.text)
+                if MY_LOGGER.isEnabledFor(DEBUG_V):
+                    MY_LOGGER.debug_v(f'Speech pipeline: {phrase.history()}')
         except Exception:
             # Reconnect once after a daemon restart or a stale user socket.
             type(self).close_client()

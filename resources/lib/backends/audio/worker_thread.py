@@ -126,6 +126,7 @@ class WorkerThread:
                         #                 f'engine_key: {engine_key}')
                         try:
                             engine: IServices = BaseServices.get_service(engine_key)
+                            phrase.add_event('worker.dequeue')
                             engine.say_phrase(phrase)
                         except Exception as e:
                             MY_LOGGER.exception('')
